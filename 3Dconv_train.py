@@ -6,6 +6,7 @@ import glob
 import os
 import SimpleITK as sitk
 import matplotlib.pyplot as plt
+import math
 
 class NifitDataSet(torch.utils.data.Dataset):
 	def __init__(self, data_folder, transform=None):
@@ -42,7 +43,7 @@ class NifitDataSet(torch.utils.data.Dataset):
 		img = img_reader.Execute()
 
 		seg_reader = sitk.ImageFileReader()
-		seg_reader.SetFileName(img_name)
+		seg_reader.SetFileName(seg_name)
 		seg = seg_reader.Execute()
 
 		sample = {'image':img, 'segmentation': seg}
@@ -77,14 +78,15 @@ class Resample(object):
 	def __call__(self, sample):
 		img, seg = sample['image'], sample['segmentation']
 
-		print img
-
 		old_spacing = img.GetSpacing()
-		old_size = img.GetLargestPossibleRegion().GetSize()
+		old_size = img.GetSize()
 
 		new_spacing = self.voxel_size
-		new_size = old_spacing*old_size/new_spacing
-		print(old_spacing,old_size,new_spacing,new_size)
+
+		new_size = []
+		for i in range(3):
+			new_size.append(int(math.ceil(old_spacing[i]*old_size[i]/new_spacing[i])))
+		new_size = tuple(new_size)
 
 		resampler = sitk.ResampleImageFilter()
 		resampler.SetInterpolator(1)
@@ -121,20 +123,23 @@ def main():
 	# apply transform to input data
 	resample = Resample(0.7)
 	sample_resampled = resample(sample)
-	print sample_resampled
-	# img_np1 = sitk.GetArrayFromImage(dataset_resampled.__getitem__(0)['image'])
-	# middle_slice_1 = int(img_np1.shape[2]/2)
+
+	# 
+	
+	# img_np1 = sitk.GetArrayFromImage(sample_resampled['image'])
+	# middle_slice_num_1 = int(img_np1.shape[2]/2)
+	# middle_slice_1 = img_np1[:,:,middle_slice_num_1]
+
+	# seg_np1 = sitk.GetArrayFromImage(sample_resampled['segmentation'])
+	# middle_slice_num_1 = int(img_np1.shape[2]/2)
+	# middle_slice_1_seg = seg_np1[:,:,middle_slice_num_1]
 
 	# fig = plt.figure()
 	# ax1 = plt.subplot(1,2,1)
-	# plt.imshow(middle_slice_0)
-	# # ax2 = plt.subplot(1,2,2)
-	# # plt.imshow(middle_slice_1)
+	# plt.imshow(middle_slice_1)
+	# ax2 = plt.subplot(1,2,2)
+	# plt.imshow(middle_slice_1_seg)
 	# plt.show()
-	# composed = transforms.Compose([])
-
-	# print(dataset.__getitem__(0)['image'])
-	# 
 
 
 if __name__ == '__main__':
